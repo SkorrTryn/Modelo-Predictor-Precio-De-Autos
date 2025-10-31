@@ -1,24 +1,18 @@
-# predecir_precio.py
-# Modelo + ÚNICO GRÁFICO: Millas vs Precio (con tendencia)
-
+#URL del Dataset de Kaggle: https://www.kaggle.com/datasets/taeefnajib/used-car-price-prediction-dataset 
+#Realizado por: Danny Leonardo Novoa Rodriguez
 import pandas as pd
-import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error
 import matplotlib.pyplot as plt
 import numpy as np
 
-# ====================
-# 1. CARGAR CSV LIMPIO
-# ====================
+
 CSV_LIMPIO = "used_car_prices_limpio.csv"
 df = pd.read_csv(CSV_LIMPIO)
 print(f"{len(df)} autos listos para ML.")
 
-# ====================
-# 2. ENTRENAR MODELO
-# ====================
+#Entranmiento del modelo
 X = df[['milage', 'model_year']]
 y = df['price']
 
@@ -28,15 +22,9 @@ modelo = LinearRegression().fit(X_train, y_train)
 mae = mean_absolute_error(y_test, modelo.predict(X_test))
 print(f"Error promedio (MAE): ${mae:,.0f}")
 
-# ====================
-# 3. GRÁFICO ÚNICO: Millas vs Precio
-# ====================
+#Grafico de Millage vs Price
 plt.figure(figsize=(10, 6))
-
-# Datos reales
 plt.scatter(df['milage'], df['price'], alpha=0.6, color='green', label='Datos reales')
-
-# Línea de tendencia (fijamos año promedio)
 millas_range = np.linspace(df['milage'].min(), df['milage'].max(), 100)
 anio_promedio = df['model_year'].mean()
 X_tendencia = np.column_stack([millas_range, np.full_like(millas_range, anio_promedio)])
@@ -52,9 +40,7 @@ plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.show()
 
-# ====================
-# 4. PREDICTOR INTERACTIVO
-# ====================
+#Logica del predictor para la terminal
 print("\n" + "="*60)
 print("     PREDICTOR DE PRECIOS DE AUTOS USADOS")
 print("="*60)

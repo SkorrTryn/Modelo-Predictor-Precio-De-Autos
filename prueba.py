@@ -19,3 +19,7 @@ print(df.dtypes)
 
 input("\nPresiona Enter para continuar...")  # ← Pausa para que veas
 print("="*60)
+
+Tabla_datos="used_car_prices.csv"
+td = pd.read_csv(Tabla_datos)
+print(f"filas toales: {len(td)}")
