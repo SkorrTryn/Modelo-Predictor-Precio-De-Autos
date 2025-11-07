@@ -9,117 +9,112 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error
-import pickle
+import joblib
 import os
+import sys
 
 def entrenar_y_guardar_modelo():
-    """ 
-    Entrena el modelo de predicción de precios y lo guarda en disco.
-    """
     print("="*60)
-    print("ENTRENAMIENTO DEL MODELO DE PREDICCIÓN DE PRECIOS")
+    print("ENTRENAMIENTO DEL MODELO V2")
     print("="*60)
-
-    #Corroboraciones previas
-    #Verifación del CSV
+    
+    # 1. CARGAR DATASET
     csv_path = "used_car_prices_limpio.csv"
     if not os.path.exists(csv_path):
-        print(f" Error: No se encontró el archivo '{csv_path}'")
+        print(f"ERROR: No se encontro {csv_path}")
         return False
     
-    #Carga del Dataset
-    print(f"\nCargando dataset desde '{csv_path}'...")
-    try:
-        df = pd.read_csv(csv_path)
-        print(f" Dataset cargado: {len(df)} registros")
-    except Exception as e:
-        print(f" Error al cargar CSV: {e}")
+    print(f"\nCargando {csv_path}...")
+    df = pd.read_csv(csv_path)
+    print(f"Dataset cargado: {len(df)} registros")
+    print(f"Columnas: {list(df.columns)}")
+    
+    # 2. VERIFICAR COLUMNAS
+    columnas_requeridas = ['milage', 'model_year', 'price']
+    if not all(col in df.columns for col in columnas_requeridas):
+        print(f"ERROR: Faltan columnas. Se encontraron: {list(df.columns)}")
         return False
     
+    # 3. PREPARAR DATOS
+    print("\nPreparando datos...")
+    X = df[['milage', 'model_year']]
+    y = df['price']
     
-    #Preparacion de los datos
-    print("\n Preparando datos para entrenamiento...")
-    X = df[['milage', 'model_year']]  # Características (features)
-    y = df['price']                    # Variable objetivo (target)
+    print(f"X shape: {X.shape}")
+    print(f"y shape: {y.shape}")
     
-    print(f"   • Características (X): {X.shape}")
-    print(f"   • Objetivo (y): {y.shape}")
-    
-    #Divsión de entraniemiento y prueba
-    print("\n Dividiendo datos (80% entrenamiento, 20% prueba)...")
+    # 4. DIVIDIR DATOS
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, 
-        test_size=0.2,   
-        random_state=42   
+        X, y, test_size=0.2, random_state=42
     )
     
-    print(f" Datos de entrenamiento: {len(X_train)} registros")
-    print(f" Datos de prueba: {len(X_test)} registros")
+    print(f"Training set: {len(X_train)} registros")
+    print(f"Test set: {len(X_test)} registros")
     
-    #Entrenamiento del modelo
-    print("\n Entrenando modelo de Regresión Lineal...")
+    # 5. ENTRENAR
+    print("\nEntrenando modelo...")
     modelo = LinearRegression()
     modelo.fit(X_train, y_train)
-    print(" Modelo entrenado exitosamente")
+    print("Modelo entrenado")
     
-    #Evaluacion del modelo
-    print("\n Evaluando precisión del modelo...")
+    # 6. EVALUAR
     y_pred = modelo.predict(X_test)
     mae = mean_absolute_error(y_test, y_pred)
+    print(f"\nMAE: ${mae:,.2f}")
+    print(f"Coeficientes: {modelo.coef_}")
+    print(f"Intercepto: {modelo.intercept_:.2f}")
     
-    print(f"    Error Absoluto Medio (MAE): ${mae:,.2f}")
-    print(f"    Interpretación: El modelo se equivoca en promedio ±${mae:,.0f}")
-    
-    #Mostrar los coeficientes aprendidos
-    print(f"\n Coeficientes del modelo:")
-    print(f"    Impacto de millas: {modelo.coef_[0]:,.4f} (por cada milla)")
-    print(f"    Impacto de año: {modelo.coef_[1]:,.2f} (por cada año)")
-    print(f"    Intercepto: {modelo.intercept_:,.2f}")
-    
-    #Save del modelo
+    # 7. GUARDAR CON JOBLIB
     modelo_path = "modelo_precios.pkl"
-    print(f"\n Guardando modelo en '{modelo_path}'...")
+    print(f"\nGuardando modelo en {modelo_path}...")
     
     try:
-        with open(modelo_path, 'wb') as archivo:
-            pickle.dump(modelo, archivo)
+        # Guardar con joblib
+        joblib.dump(modelo, modelo_path, compress=3)
+        print("joblib.dump() completado")
         
-        # Verificar que se guardó correctamente
-        tamano_mb = os.path.getsize(modelo_path) / (1024 * 1024)
-        print(f" Modelo guardado exitosamente ({tamano_mb:.2f} MB)")
+        # Verificar inmediatamente
+        if not os.path.exists(modelo_path):
+            print("ERROR: El archivo NO se creo")
+            return False
+        
+        # Ver tamaño
+        tamano = os.path.getsize(modelo_path)
+        print(f"Tamaño del archivo: {tamano} bytes ({tamano/1024:.2f} KB)")
+        
+        # Verificar que sea mayor a 1 KB
+        if tamano < 1000:
+            print("WARNING: El archivo es sospechosamente pequeño")
+            print(f"Contenido del directorio:")
+            for f in os.listdir('.'):
+                if f.endswith('.pkl'):
+                    size = os.path.getsize(f)
+                    print(f"  {f}: {size} bytes")
+            return False
+        
+        # 8. PROBAR CARGA
+        print("\nProbando cargar el modelo...")
+        modelo_cargado = joblib.load(modelo_path)
+        print("Modelo cargado exitosamente")
+        
+        # Hacer prediccion de prueba
+        test_X = [[50000, 2020]]
+        pred = modelo_cargado.predict(test_X)[0]
+        print(f"Prediccion de prueba: ${pred:,.2f}")
+        
+        print("\n" + "="*60)
+        print("EXITO: Modelo guardado y verificado")
+        print("="*60)
+        return True
         
     except Exception as e:
-        print(f" Error al guardar modelo: {e}")
+        print(f"ERROR: {e}")
+        import traceback
+        traceback.print_exc()
         return False
-    
-    # 9. VERIFICAR CARGA DEL MODELO
-    print("\n Verificando el modelo.")
-    try:
-        with open(modelo_path, 'rb') as archivo:
-            modelo_cargado = pickle.load(archivo)
-        
-        # Hacer una predicción de prueba
-        test_millas = 50000
-        test_anio = 2020
-        precio_prueba = modelo_cargado.predict([[test_millas, test_anio]])[0]
-        
-        print(f" Modelo verificado correctamente")
-        print(f"  Prueba: Auto {test_anio} con {test_millas:,} millas")
-        print(f"  Predicción: ${precio_prueba:,.2f}")
-        
-    except Exception as e:
-        print(f" Error al verificar modelo: {e}")
-        return False
-    
-    print(" ENTRENAMIENTO COMPLETADO CON ÉXITO")
-    return True
 
-# EJECUTAR SI SE LLAMA DIRECTAMENTE
 if __name__ == "__main__":
     exito = entrenar_y_guardar_modelo()
-    
-    if not exito:
-        print("\n El entrenamiento falló.")
-        exit(1)
-    
-    exit(0)
+    sys.exit(0 if exito else 1)
+
+
