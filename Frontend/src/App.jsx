@@ -84,14 +84,31 @@ function App() {
 
       const data = await response.json();
 
-      if (data.exito) {
-        setResult(data);
-      } else {
-        alert('Error al calcular el precio');
-      }
+     if (data.exito) {
+  setResult(data);
+  
+  // Envio del email a n8n
+  fetch('https://novoanevn.app.n8n.cloud/webhook/predictauto', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      email: formData.email,
+      millas: data.millas,
+      anio: data.anio,
+      precio: data.precio_estimado
+    })
+  }).catch(err => {
+    
+    console.log('Email notification error:', err);
+  });
+} else {
+  alert('Error al calcular el precio');
+}
     } catch (error) {
-      alert('Error de conexión. Verifica tu internet.');
-      console.error(error);
+      console.error('Error:', error);
+      alert('Error al conectar con el servidor');
     } finally {
       setLoading(false);
     }
