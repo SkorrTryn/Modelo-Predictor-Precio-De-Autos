@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './styles.css';
 
-const API_URL = 'https://danblaxter-predictor-precios-autos.hf.space';
+const API_URL = 'https://predictor-precio-de-autos.onrender.com';
 
 function App() {
   const [formData, setFormData] = useState({
