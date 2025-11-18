@@ -104,7 +104,7 @@ async def predecir_precio(datos: DatosVehiculo):
         # Crear DataFrame con los datos de entrada
         datos_prediccion = pd.DataFrame({
             'milage': [datos.millas],
-            'year': [datos.anio]
+            'model_year': [datos.anio]
         })
         
         # Realizar predicción
