@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './styles.css';
 
-const API_URL = 'https://predictor-precio-de-autos.onrender.com';
+const API_URL = 'https://predictor-precios-autos.onrender.com';
+const TELEGRAM_BOT = 'https://web.telegram.org/k/#@DanBlaxter_bot'; // 
 
 function App() {
   const [formData, setFormData] = useState({
@@ -13,6 +14,48 @@ function App() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [globalStats, setGlobalStats] = useState(null);
+  const [personalStats, setPersonalStats] = useState(null);
+
+  // Cargar estadísticas globales al inicio
+  useEffect(() => {
+    fetchGlobalStats();
+  }, []);
+
+  // Función para obtener estadísticas globales
+  const fetchGlobalStats = async () => {
+    try {
+      const mockData = {
+        total_predicciones: 1245,
+        anio_popular: 2020,
+        rango_millas: "40,000 - 60,000",
+        precio_promedio: 47850,
+        consultas_semana: 324
+      };
+      
+      setGlobalStats(mockData);
+    } catch (error) {
+      console.log('Error cargando stats:', error);
+    }
+  };
+
+  // Función para obtener estadísticas personalizadas
+  const fetchPersonalStats = async (anio, millas, precio) => {
+    try {
+      const mockData = {
+        promedio_precio_anio: 48320,
+        promedio_millas_anio: 62000,
+        consultas_anio: 287,
+        percentil: 65,
+        comparacion_precio: precio > 48320 ? 'arriba' : 'abajo',
+        diferencia_porcentaje: Math.abs(((precio - 48320) / 48320) * 100).toFixed(1)
+      };
+      
+      setPersonalStats(mockData);
+    } catch (error) {
+      console.log('Error cargando stats personalizadas:', error);
+    }
+  };
 
   // Validar campos
   const validateField = (name, value) => {
@@ -77,35 +120,36 @@ function App() {
         },
         body: JSON.stringify({
           millas: parseFloat(formData.millas),
-          anio: parseInt(formData.anio),
-          email: formData.email
+          anio: parseInt(formData.anio)
         })
       });
 
       const data = await response.json();
 
-     if (data.exito) {
-  setResult(data);
-  
-  // Envio del email a n8n
-  fetch('https://novoanevn.app.n8n.cloud/webhook/predictauto', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      email: formData.email,
-      millas: data.millas,
-      anio: data.anio,
-      precio: data.precio_estimado
-    })
-  }).catch(err => {
-    
-    console.log('Email notification error:', err);
-  });
-} else {
-  alert('Error al calcular el precio');
-}
+      if (data.exito) {
+        setResult(data);
+        
+        // Cargar estadísticas personalizadas
+        fetchPersonalStats(data.anio, data.millas, data.precio_estimado);
+        
+        // Envío del email a Make
+        fetch('https://hook.us2.make.com/ygbnmyhbwfk2jfeooweqygeblr7tol2f', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            millas: data.millas,
+            anio: data.anio,
+            precio: data.precio_estimado
+          })
+        }).catch(err => {
+          console.log('Email notification error:', err);
+        });
+      } else {
+        alert('Error al calcular el precio');
+      }
     } catch (error) {
       console.error('Error:', error);
       alert('Error al conectar con el servidor');
@@ -119,6 +163,7 @@ function App() {
     setFormData({ millas: '', anio: '', email: '' });
     setErrors({});
     setResult(null);
+    setPersonalStats(null);
   };
 
   // Formatear precio
@@ -140,62 +185,86 @@ function App() {
   return (
     <div className="container">
       {/* Header */}
-    <header className="header">
-  <h1>PredictAuto AI</h1>
-  <img 
-    src="/iconocoche.png" 
-    alt="Carro" 
-    style={{ 
-      width: '80px', 
-      height: '80px', 
-      marginTop: '1px',
-      marginBottom: '1px'
-    }} 
-  />
-  <p>Descubre el valor real de tu vehículo</p>
-</header>
+      <header className="header">
+        <h1>PredictAuto AI</h1>
+        <img 
+          src="/iconocoche.png" 
+          alt="Carro" 
+          style={{ 
+            width: '80px', 
+            height: '80px', 
+            marginTop: '1px',
+            marginBottom: '1px'
+          }} 
+        />
+        <p>Descubre el valor real de tu vehículo</p>
+      </header>
+
+      {/* Dashboard Global (antes de hacer predicción) */}
+      {!result && globalStats && (
+        <div className="global-stats">
+          <h3>📊 Estadísticas del Mercado</h3>
+          <div className="stats-grid">
+            <div className="stat-item">
+              <span className="stat-number">{formatNumber(globalStats.total_predicciones)}</span>
+              <span className="stat-label">Predicciones totales</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-number">{globalStats.anio_popular}</span>
+              <span className="stat-label">Año más consultado</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-number">{globalStats.rango_millas}</span>
+              <span className="stat-label">Rango de millaje común</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-number">{formatPrice(globalStats.precio_promedio)}</span>
+              <span className="stat-label">Precio promedio</span>
+            </div>
+          </div>
+          <p className="stats-update">
+             {globalStats.consultas_semana} personas consultaron esta semana
+          </p>
+        </div>
+      )}
 
       {/* Card principal */}
       <div className="card">
         {!result ? (
           <>
-            <h2>Modelo predectivo de precios</h2>
-             {/* Información del modelo */}
-                <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                gap: '25px',
-                marginBottom: '30px',
-                fontSize: '13px',
-                color: '#888',
-                flexWrap: 'wrap'
-                }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ 
-                    width: '8px', 
-                    height: '8px', 
-                    backgroundColor: '#468B62', 
-                    borderRadius: '50%',
-                    display: 'inline-block'
-                    }}></span>
-                    <span>3,943 vehículos analizados</span>
-                </div>
-                
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ 
-                    width: '8px', 
-                    height: '8px', 
-                    backgroundColor: '#BC605C', 
-                    borderRadius: '50%',
-                    display: 'inline-block'
-                    }}></span>
-                    <span>Precisión promedio: ±$27,826</span>
-                </div>
-                </div>
-            
-            
-
-            
+            <h2>Modelo predictivo de precios</h2>
+            {/* Información del modelo */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '25px',
+              marginBottom: '30px',
+              fontSize: '13px',
+              color: '#888',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ 
+                  width: '8px', 
+                  height: '8px', 
+                  backgroundColor: '#468B62', 
+                  borderRadius: '50%',
+                  display: 'inline-block'
+                }}></span>
+                <span>3,943 vehículos analizados</span>
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ 
+                  width: '8px', 
+                  height: '8px', 
+                  backgroundColor: '#BC605C', 
+                  borderRadius: '50%',
+                  display: 'inline-block'
+                }}></span>
+                <span>Precisión promedio: ±$27,826</span>
+              </div>
+            </div>
 
             <form onSubmit={handleSubmit}>
               {/* Millaje */}
@@ -268,7 +337,7 @@ function App() {
             </form>
           </>
         ) : (
-          /* Resultado */
+          /* Resultado con Analytics Personalizadas */
           <div className="result">
             <div className="result-icon">✓</div>
             <h3>Precio Calculado</h3>
@@ -292,8 +361,48 @@ function App() {
               </div>
             </div>
 
+            {/* Analytics Personalizadas */}
+            {personalStats && (
+              <div className="personal-stats">
+                <h4>📊 Tu Vehículo vs. El Mercado</h4>
+                
+                <div className="comparison-grid">
+                  <div className="comparison-item">
+                    <span className="comparison-label">Precio promedio {result.anio}</span>
+                    <span className="comparison-value">{formatPrice(personalStats.promedio_precio_anio)}</span>
+                  </div>
+                  
+                  <div className="comparison-item">
+                    <span className="comparison-label">Tu vehículo está</span>
+                    <span className={`comparison-badge ${personalStats.comparacion_precio}`}>
+                      {personalStats.diferencia_porcentaje}% {personalStats.comparacion_precio === 'arriba' ? '↑' : '↓'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="comparison-grid">
+                  <div className="comparison-item">
+                    <span className="comparison-label">Millaje promedio {result.anio}</span>
+                    <span className="comparison-value">{formatNumber(personalStats.promedio_millas_anio)} mi</span>
+                  </div>
+                  
+                  <div className="comparison-item">
+                    <span className="comparison-label">Tu millaje</span>
+                    <span className={`comparison-badge ${result.millas < personalStats.promedio_millas_anio ? 'mejor' : 'normal'}`}>
+                      {result.millas < personalStats.promedio_millas_anio ? '✓ Mejor' : 'Promedio'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="insight-box">
+                  <strong>💡 Insight:</strong> {personalStats.consultas_anio} personas consultaron vehículos del {result.anio}. 
+                  Tu auto está en el percentil {personalStats.percentil}% del mercado.
+                </div>
+              </div>
+            )}
+
             <div className="email-notice">
-              Los detalles fueron enviados a tu correo electrónico
+              ✉️ Los detalles fueron enviados a tu correo electrónico
             </div>
 
             <button className="btn" onClick={handleNewConsultation}>
@@ -303,10 +412,27 @@ function App() {
         )}
       </div>
 
+      {/* Botón flotante de Telegram */}
+      <a 
+        href={TELEGRAM_BOT} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="telegram-float"
+        title="Chatea con nuestro asistente"
+      >
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="white">
+          <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.223-.548.223l.188-2.85 5.18-4.68c.223-.198-.054-.308-.346-.11l-6.4 4.03-2.76-.918c-.6-.187-.612-.6.125-.89l10.782-4.156c.504-.187.943.112.78.89z"/>
+        </svg>
+        <span>¿Dudas?</span>
+      </a>
+
       {/* Footer */}
       <footer className="footer">
         <p>Desarrollado por Danny Leonardo Novoa Rodriguez</p>
         <p>© 2025 PredictAuto AI</p>
+        <div className="footer-links">
+    
+        </div>
       </footer>
     </div>
   );
