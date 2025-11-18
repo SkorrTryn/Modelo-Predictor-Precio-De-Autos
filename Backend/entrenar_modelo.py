@@ -4,24 +4,24 @@ Propósito: Entrenar el modelo de regresión lineal y guardarlo como archivo .pk
 Ejecutar una sola vez antes de desplegar la API
 """
 
-#Librerias
+# Librerías
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error
-import joblib
+import pickle
 import os
 import sys
 
 def entrenar_y_guardar_modelo():
     print("="*60)
-    print("ENTRENAMIENTO DEL MODELO V2")
+    print("ENTRENAMIENTO DEL MODELO V3 - PICKLE")
     print("="*60)
     
     # 1. CARGAR DATASET
     csv_path = "used_car_prices_limpio.csv"
     if not os.path.exists(csv_path):
-        print(f"ERROR: No se encontro {csv_path}")
+        print(f"ERROR: No se encontró {csv_path}")
         return False
     
     print(f"\nCargando {csv_path}...")
@@ -55,7 +55,7 @@ def entrenar_y_guardar_modelo():
     print("\nEntrenando modelo...")
     modelo = LinearRegression()
     modelo.fit(X_train, y_train)
-    print("Modelo entrenado")
+    print("✓ Modelo entrenado")
     
     # 6. EVALUAR
     y_pred = modelo.predict(X_test)
@@ -64,46 +64,45 @@ def entrenar_y_guardar_modelo():
     print(f"Coeficientes: {modelo.coef_}")
     print(f"Intercepto: {modelo.intercept_:.2f}")
     
-    # 7. GUARDAR CON JOBLIB
+    # 7. GUARDAR CON PICKLE (NO JOBLIB)
     modelo_path = "modelo_precios.pkl"
     print(f"\nGuardando modelo en {modelo_path}...")
     
     try:
-        # Guardar con joblib
-        joblib.dump(modelo, modelo_path, compress=3)
-        print("joblib.dump() completado")
+        # CAMBIO CRÍTICO: Usar pickle en vez de joblib
+        with open(modelo_path, 'wb') as f:
+            pickle.dump(modelo, f, protocol=pickle.HIGHEST_PROTOCOL)
         
-        # Verificar inmediatamente
+        print("✓ pickle.dump() completado")
+        
+        # Verificar que se creó
         if not os.path.exists(modelo_path):
-            print("ERROR: El archivo NO se creo")
+            print("ERROR: El archivo NO se creó")
             return False
         
         # Ver tamaño
         tamano = os.path.getsize(modelo_path)
         print(f"Tamaño del archivo: {tamano} bytes ({tamano/1024:.2f} KB)")
         
-        # Verificar que sea mayor a 1 KB
+        # Verificar tamaño mínimo
         if tamano < 1000:
             print("WARNING: El archivo es sospechosamente pequeño")
-            print(f"Contenido del directorio:")
-            for f in os.listdir('.'):
-                if f.endswith('.pkl'):
-                    size = os.path.getsize(f)
-                    print(f"  {f}: {size} bytes")
             return False
         
         # 8. PROBAR CARGA
         print("\nProbando cargar el modelo...")
-        modelo_cargado = joblib.load(modelo_path)
-        print("Modelo cargado exitosamente")
+        with open(modelo_path, 'rb') as f:
+            modelo_cargado = pickle.load(f)
         
-        # Hacer prediccion de prueba
+        print("✓ Modelo cargado exitosamente")
+        
+        # Hacer predicción de prueba
         test_X = [[50000, 2020]]
         pred = modelo_cargado.predict(test_X)[0]
-        print(f"Prediccion de prueba: ${pred:,.2f}")
+        print(f"Predicción de prueba: ${pred:,.2f}")
         
         print("\n" + "="*60)
-        print("EXITO: Modelo guardado y verificado")
+        print("✓✓✓ ÉXITO: Modelo guardado y verificado ✓✓✓")
         print("="*60)
         return True
         
@@ -116,5 +115,4 @@ def entrenar_y_guardar_modelo():
 if __name__ == "__main__":
     exito = entrenar_y_guardar_modelo()
     sys.exit(0 if exito else 1)
-
 

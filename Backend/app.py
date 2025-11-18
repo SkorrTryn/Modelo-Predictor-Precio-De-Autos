@@ -140,8 +140,6 @@ async def analytics_global():
     Por ahora, retornamos datos calculados o mock.
     """
     try:
-        #Datos mock (temporal)
-        
         stats = {
             "total_predicciones": 1245,
             "anio_popular": 2020,
