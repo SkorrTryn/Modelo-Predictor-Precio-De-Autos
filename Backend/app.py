@@ -16,7 +16,7 @@ import json
 import os
 
 # Cargar modelo entrenado
-with open('modelo_precios_autos.pkl', 'rb') as f:
+with open('modelo_precios.pkl', 'rb') as f:
     modelo = pickle.load(f)
 
 # Inicializar FastAPI
@@ -296,7 +296,7 @@ async def make_prediccion(datos: dict):
                     detail=f"Campo requerido: {field}"
                 )
         
-        # Simplemente confirmamos recepción
+        
         # Make guardará estos datos en Google Sheets
         return {
             "guardado": True,
