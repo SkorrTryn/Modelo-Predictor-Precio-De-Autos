@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import './styles.css';
 
-const API_URL = 'https://predictor-precios-autos.onrender.com';
+const API_URL = 'https://predictor-precio-de-autos.onrender.com';
 const TELEGRAM_BOT = 'https://web.telegram.org/k/#@DanBlaxter_bot'; // 
 
 function App() {
